@@ -20,8 +20,8 @@ public class GameScript : MonoBehaviour {
     int portB = 8002;
 
     string instancePlayer;
-    bool oneConnected;
-    bool twoConnected;
+    bool isState;
+
 
     int socketPlayerOne;
     int socketPlayerTwo;
@@ -39,6 +39,7 @@ public class GameScript : MonoBehaviour {
 
     // Use this for initialization
     void Start () {
+        isState = false;
         instancePlayer = "";
         NetworkTransport.Init();
         config = new ConnectionConfig();
@@ -51,6 +52,31 @@ public class GameScript : MonoBehaviour {
         getKeyInput();
         recieve();
 	}
+
+    public void changeInputTypeRemote()
+    {
+        if (isState == false)
+        {
+            isState = true;
+        }
+        else
+        {
+            isState = false;
+        }
+    }
+
+    public void changeInputTypeLocal()
+    {
+        if (isState == false)
+        {
+            isState = true;
+        }
+        else
+        {
+            isState = false;
+        }
+        send("Switch");
+    }
 
 
     public void send(string s)
@@ -82,27 +108,59 @@ public class GameScript : MonoBehaviour {
 
                 tOne.position =
                 Vector3.MoveTowards(tOne.position, new Vector3(tOne.position.x, 15, 100), .4f);
-                send("w");
+                if(isState == true)
+                {
+                    send(SerializeVector3Array(tOne.position));
+                }
+                else
+                {
+                    send("w");
+                }
+                
             }
             if (Input.GetKeyDown("a"))
             {
                 tOne.position =
                 Vector3.MoveTowards(tOne.position, new Vector3(15, tOne.position.y, 100), .4f);
-                send("a");
+                if (isState == true)
+                {
+                    send(SerializeVector3Array(tOne.position));
+                }
+                else
+                {
+                    send("a");
+                }
+                
             }
             if (Input.GetKeyDown("s"))
             {
 
                 tOne.position =
                 Vector3.MoveTowards(tOne.position, new Vector3(tOne.position.x, -15, 100), .4f);
-                send("s");
+                if (isState == true)
+                {
+                    send(SerializeVector3Array(tOne.position));
+                }
+                else
+                {
+                    send("s");
+                }
+                
             }
             if (Input.GetKeyDown("d"))
             {
 
                 tOne.position =
                 Vector3.MoveTowards(tOne.position, new Vector3(-15, tOne.position.y, 100), .4f);
-                send("d");
+                if (isState == true)
+                {
+                    send(SerializeVector3Array(tOne.position));
+                }
+                else
+                {
+                    send("d");
+                }
+                
             }
         }
         else if (instancePlayer == "p2")
@@ -112,27 +170,59 @@ public class GameScript : MonoBehaviour {
 
                     tTwo.position =
                     Vector3.MoveTowards(tTwo.position, new Vector3(tTwo.position.x, 15, 100), .4f);
-                    send("w");
+                        if (isState == true)
+                        {
+                            send(SerializeVector3Array(tTwo.position));
+                        }
+                        else
+                        {
+                            send("w");
+                        }
+                
                 }
                 if (Input.GetKeyDown("a"))
                 {
                     tTwo.position =
                     Vector3.MoveTowards(tTwo.position, new Vector3(15, tTwo.position.y, 100), .4f);
-                    send("a");
-                }
+                        if (isState == true)
+                        {
+                              send(SerializeVector3Array(tTwo.position));
+                        }
+                        else
+                        {
+                            send("a");
+                        }
+
+                    }
                 if (Input.GetKeyDown("s"))
                 {
 
                     tTwo.position =
                     Vector3.MoveTowards(tTwo.position, new Vector3(tTwo.position.x, -15, 100), .4f);
-                    send("s");
+                        if (isState == true)
+                        {
+                             send(SerializeVector3Array(tTwo.position));
+                        }
+                        else
+                        {
+                         send("s");
+                        }
+                
                 }
                 if (Input.GetKeyDown("d"))
                 {
 
                     tTwo.position =
                     Vector3.MoveTowards(tTwo.position, new Vector3(-15, tTwo.position.y, 100), .4f);
-                    send("d");
+                        if (isState == true)
+                        {
+                            send(SerializeVector3Array(tTwo.position));
+                        }
+                        else
+                        {
+                            send("d");
+                        }
+                
                 }
             }
         }
@@ -163,7 +253,30 @@ public class GameScript : MonoBehaviour {
     }
 
 
+    private static string SerializeVector3Array(Vector3 aVector)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.Append(aVector.x).Append(" ").Append(aVector.y).Append(" ").Append(aVector.z).Append("|");
 
+        sb.Remove(sb.Length - 1, 1);
+        return sb.ToString();
+    }
+
+
+
+    private static Vector3 DeserializeVector3Array(string aData)
+    {
+
+        Vector3 result = new Vector3();
+
+        string[] values = aData.Split(' ');
+        if (values.Length != 3)
+        {
+            throw new System.FormatException("component count mismatch. Expected 3 components but got " + values.Length);
+        }
+        result = new Vector3(float.Parse(values[0]), float.Parse(values[1]), float.Parse(values[2]));
+        return result;
+    }
 
     public void inputbasedMovement(string c)
     {
@@ -241,10 +354,27 @@ public class GameScript : MonoBehaviour {
                         Stream stream = new MemoryStream(recBuffer);
                         BinaryFormatter formatter = new BinaryFormatter();
                         dataIn = formatter.Deserialize(stream) as string;
-
-                        Debug.Log("Message received: " + dataIn);
-                        inputbasedMovement(dataIn);
-
+                        if(dataIn == "Switch")
+                        {
+                            Debug.Log("switch");
+                            changeInputTypeRemote();
+                        }
+                        else if(isState == true)
+                        {
+                            Debug.Log(dataIn);
+                            if (instancePlayer == "p1")
+                            {
+                                tTwo.position = DeserializeVector3Array(dataIn);
+                            }
+                            else if (instancePlayer == "p2")
+                            {
+                                tOne.position = DeserializeVector3Array(dataIn);
+                            }
+                        }
+                        else
+                        {
+                            inputbasedMovement(dataIn);
+                        }
                         break;
 
                     case NetworkEventType.DisconnectEvent: //4
